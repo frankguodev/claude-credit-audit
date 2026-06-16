@@ -1,0 +1,46 @@
+[project]
+name = "claude-credit-audit"
+version = "0.1.0"
+description = "Forecast which agent calls burn Anthropic Claude Agent SDK credit after the 2026-06-15 billing change — Claude Code / claude-code-action / claude -p cost, monthly risk, and cheaper alternatives."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "frankguo" }]
+keywords = [
+  "claude", "claude-code", "anthropic", "agent-sdk", "credit", "cost",
+  "billing", "finops", "github-actions", "ci", "audit", "claude-skill",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Build Tools",
+  "Topic :: Utilities",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = ["pyyaml>=6.0"]
+
+[project.urls]
+Homepage = "https://github.com/frankguodev/claude-credit-audit"
+Issues = "https://github.com/frankguodev/claude-credit-audit/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+claude-credit-audit = "cost_audit.cli:main"
+cost-audit = "cost_audit.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cost_audit = ["data/*.yaml"]

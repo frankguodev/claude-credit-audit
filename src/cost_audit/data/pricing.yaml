@@ -1,0 +1,20 @@
+# 计划月度 credit 额度（USD，按 API 标准价计费）。来源：Anthropic 2026-06-15 计费变更。
+plans:
+  pro:    {credit_usd: 20}
+  max5x:  {credit_usd: 100}
+  max20x: {credit_usd: 200}
+
+# 模型单价（USD / 百万 token）。核实自 claude-api 参考（2026-06）。
+models:
+  claude-opus-4-8:   {input_per_mtok: 5.0, output_per_mtok: 25.0}
+  claude-sonnet-4-6: {input_per_mtok: 3.0, output_per_mtok: 15.0}
+  claude-haiku-4-5:  {input_per_mtok: 1.0, output_per_mtok: 5.0}
+
+# 单次调用 token 用量档位（估算值，可按真实情况调整）。
+token_tiers:
+  small:  {input: 15000,  output: 2000}
+  medium: {input: 60000,  output: 8000}
+  large:  {input: 200000, output: 20000}
+
+default_model: claude-opus-4-8
+default_tier: medium

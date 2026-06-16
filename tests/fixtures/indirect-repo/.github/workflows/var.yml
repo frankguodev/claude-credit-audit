@@ -1,0 +1,10 @@
+name: Indirect CLI
+on:
+  pull_request:
+env:
+  REVIEW_CLI_BIN: claude
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: cat diff.patch | "$REVIEW_CLI_BIN" -x "review this"

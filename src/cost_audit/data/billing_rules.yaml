@@ -1,0 +1,106 @@
+# 6/15 计费规则（数据驱动，便于后续更新）。
+# billing: credit = 烧 Agent SDK credit；subscription = 仍走订阅池。
+# patterns 为 Python 正则，任一命中即归类。
+# confidence: high | medium | low。tier: small | medium | large。
+# signal / reason 为 {en, zh} 双语；报告按 --lang 选取。
+rules:
+  - id: claude_headless
+    billing: credit
+    confidence: high
+    tier: large
+    signal:
+      en: "claude -p / headless"
+      zh: "claude -p / headless"
+    reason:
+      en: "headless `claude -p` is a non-interactive call; from 2026-06-15 it consumes Agent SDK credit"
+      zh: "headless `claude -p` 为非交互式调用，6/15 起计入 Agent SDK credit"
+    patterns:
+      - 'claude\s+(-\S*\s+)*-p\b'
+      - 'claude\s+.*--print\b'
+
+  - id: claude_code_action
+    billing: credit
+    confidence: high
+    tier: medium
+    signal:
+      en: "GitHub Actions (claude-code-action)"
+      zh: "GitHub Actions (claude-code-action)"
+    reason:
+      en: "claude-code-action in GitHub Actions runs non-interactively and consumes credit"
+      zh: "GitHub Actions 中的 claude-code-action 属非交互式，计入 credit"
+    patterns:
+      - 'anthropics/claude-code-action'
+      - 'anthropics/claude-code-base-action'
+
+  - id: agent_sdk
+    billing: credit
+    confidence: high
+    tier: medium
+    signal:
+      en: "Agent SDK programmatic call"
+      zh: "Agent SDK 程序化调用"
+    reason:
+      en: "Claude Agent SDK programmatic call consumes credit"
+      zh: "Claude Agent SDK 程序化调用，计入 credit"
+    patterns:
+      - '@anthropic-ai/claude-agent-sdk'
+      - 'claude_agent_sdk'
+      - 'ClaudeSDKClient'
+      - 'from\s+claude_agent_sdk'
+
+  - id: anthropic_sdk
+    billing: credit
+    confidence: medium
+    tier: small
+    signal:
+      en: "Anthropic API SDK call"
+      zh: "Anthropic API SDK 调用"
+    reason:
+      en: "Programmatic Anthropic SDK calls bill at standard API rates (separate from the subscription)"
+      zh: "通过 Anthropic SDK 的程序化调用按 API 标准价计费（独立于订阅）"
+    patterns:
+      - 'anthropic\.Anthropic\('
+      - 'new\s+Anthropic\('
+      - '@anthropic-ai/sdk'
+
+  # 以下为 low 置信度的「间接/能力」信号：只代表「可能在 CI 里烧 credit」，
+  # 不是确定的一次调用，因此报告中单列、不计入成本预测，提示人工确认。
+  - id: claude_code_install
+    billing: credit
+    confidence: low
+    tier: medium
+    signal:
+      en: "CI installs Claude Code CLI"
+      zh: "CI 安装 Claude Code CLI"
+    reason:
+      en: "CI installs the Claude Code CLI; if run non-interactively (e.g. claude -p) it burns credit — confirm whether it is actually called"
+      zh: "CI 中安装 Claude Code CLI，若以非交互方式运行（如 claude -p）会烧 credit——需确认实际是否调用"
+    patterns:
+      - '@anthropic-ai/claude-code(?![-\w])'
+
+  - id: cli_var_indirect
+    billing: credit
+    confidence: low
+    tier: medium
+    signal:
+      en: "variable indirectly set to claude CLI"
+      zh: "变量间接指定 claude 为 CLI"
+    reason:
+      en: "A variable points the CLI at claude; at runtime it may run non-interactively and burn credit — indirect call, verify manually"
+      zh: "通过变量把 CLI 指定为 claude，运行时可能以非交互方式烧 credit——间接调用，需人工确认"
+    patterns:
+      - '\b\w*(?:CLI|BIN|CMD|TOOL|RUNNER)\w*\s*[:=]\s*["'']?claude\b'
+
+  - id: claude_spawn
+    billing: credit
+    confidence: low
+    tier: medium
+    signal:
+      en: "spawn/exec a claude binary"
+      zh: "spawn/exec claude 二进制"
+    reason:
+      en: "Code spawns/execs a binary named claude (e.g. claude -p), a programmatic non-interactive call that may burn credit — confirm the actual args"
+      zh: "代码中 spawn/exec 一个名为 claude 的二进制（如 claude -p），属程序化非交互调用，可能烧 credit——需确认实际参数"
+    patterns:
+      - '(?:spawnSync|execFile|execSync|spawn|exec)\s*\(\s*[''"]?\w*claude\w*'
+      - '(?:spawnSync|execFile|execSync|spawn|exec)\s*\(\s*[''"]?\w*Claude\w*'

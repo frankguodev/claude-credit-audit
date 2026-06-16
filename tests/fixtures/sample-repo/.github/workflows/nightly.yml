@@ -1,0 +1,11 @@
+name: Nightly review
+on:
+  schedule:
+    - cron: '0 3 * * *'
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Full repo review
+        run: claude -p "review the whole repo and summarize"

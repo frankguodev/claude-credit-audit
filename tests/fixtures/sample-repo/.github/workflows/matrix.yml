@@ -1,0 +1,13 @@
+name: Matrix build
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu, macos, windows]
+        node: [18, 20]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: claude -p --model claude-haiku-4-5 "lint this matrix leg"
