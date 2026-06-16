@@ -1,6 +1,6 @@
 [project]
 name = "claude-credit-audit"
-version = "0.1.0"
+version = "0.1.1"
 description = "Forecast which agent calls burn Anthropic Claude Agent SDK credit after the 2026-06-15 billing change — Claude Code / claude-code-action / claude -p cost, monthly risk, and cheaper alternatives."
 readme = "README.md"
 requires-python = ">=3.10"
