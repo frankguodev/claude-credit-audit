@@ -53,48 +53,22 @@ claude-credit-audit . --plan max5x --fail-on-burn --format json --output cost-re
 - 默认只取**非交互式**会话（`entrypoint` 非 vscode/desktop），更代表 CI/headless 规模；不足 3 个时回退到全部并标注「可能偏大」。
 
 ## 示例报告
+对公开仓库的真实审计，均以 `--plan pro --lang zh` 运行。
 
-> 终端截图就位前的文字版示例。
+### 🔴 [browser-use/browser-use](https://github.com/browser-use/browser-use) — 32 MB，知名活跃 Python 项目
+`.github/workflows/claude.yml` 里的 `claude-code-action` 步骤被命中，并给出触发类型、识别到的模型、月度成本与更省的替代方案。
 
-### ✅ 无消耗 — 不烧 credit
-即使没有会烧 credit 的调用，也会检查间接信号并单列出来供你核实：
+![browser-use/browser-use 审计结果](https://raw.githubusercontent.com/frankguodev/claude-credit-audit/main/public/browser-use-zh.png)
 
-```
-📊 月度 credit 预测：$0 预期（区间 $0–$0） / $100 额度（max5x）
-   🟢 未发现会烧 credit 的调用
+### 🔴 [Shubhamsaboo/awesome-llm-apps](https://github.com/Shubhamsaboo/awesome-llm-apps) — 204 MB
+大仓库：关键词预过滤让扫描保持快速，其 `claude-code-action` workflow 被检测并计价。
 
-⚠️ 可能烧 credit（间接/安装信号，未计入上方预测，需人工确认）：
-  scripts/install.sh:3  [CI 安装 Claude Code CLI]
-    npm install -g @anthropic-ai/claude-code@latest
-    原因：CI 中安装 Claude Code CLI，若以非交互方式运行（如 claude -p）会烧 credit——需确认实际是否调用
-  src/spawn.ts:6  [spawn/exec claude 二进制]
-    const proc = spawn(claudePath, args)
-    原因：代码中 spawn/exec 一个名为 claude 的二进制（如 claude -p），属程序化非交互调用，可能烧 credit——需确认实际参数
-  .github/workflows/var.yml:5  [变量间接指定 claude 为 CLI]
-    REVIEW_CLI_BIN: claude
-    原因：通过变量把 CLI 指定为 claude，运行时可能以非交互方式烧 credit——间接调用，需人工确认
-```
+![Shubhamsaboo/awesome-llm-apps 审计结果](https://raw.githubusercontent.com/frankguodev/claude-credit-audit/main/public/awesome-llm-apps-zh.png)
 
-### 🔴 有消耗 — 会烧 credit
-```
-📊 月度 credit 预测：$133 预期（区间 $15–$179） / $100 额度（max5x）
-   🔴 预期情形约第 23 天烧爆额度
-   ↳ 烧爆后所有自动化请求停止（除非已手动开启 overflow billing）
+### ✅ [JimLiu/baoyu-skills](https://github.com/JimLiu/baoyu-skills) — 35 MB，Claude skills 合集
+没有会烧 credit 的调用。配置文件与注释里的 `~/.claude/…` 路径引用被正确地**不计入**——无误报。
 
-🔴 会烧 credit 的调用点（按预期月度消耗排序）：
-  .github/workflows/matrix.yml:13  [claude -p / headless]
-    模型：claude-haiku-4-5  档位：large
-    触发：push + workflow_dispatch + matrix ×6 → ~204 次/月 → $61.20/月（区间 $5.10–$61.20，占 46%）
-    💡 能交互完成的改用交互式 claude：省全部 $61.20/月（仍走订阅）
-  .github/workflows/nightly.yml:11  [claude -p / headless]
-    模型：claude-opus-4-8  档位：large
-    触发：cron(0 3 * * *) → ~30 次/月 → $45.63/月（区间 $3.80–$45.63，占 34%）
-    💡 降到每周触发：$45.63→$6.50/月，省 $39.14/月
-    💡 改用 claude-haiku-4-5：$45.63→$9.13/月，省 $36.50/月
-  … 还有 4 条（pr-check.yml、edge.sh、issue-bot.yml、agent.py）
-```
-
-_已精简：每条调用还会打印一行 `原因:` 和一条 overflow 提示；`--format md` 则输出表格。_
+![JimLiu/baoyu-skills 审计结果](https://raw.githubusercontent.com/frankguodev/claude-credit-audit/main/public/baoyu-skills-zh.png)
 
 ## 工作原理
 - **区间**：small/large 档给出乐观–悲观带，预期值按调用类型的默认档（headless → large、SDK → small 等）。
@@ -144,6 +118,10 @@ git clone https://github.com/frankguodev/claude-credit-audit "$env:USERPROFILE\.
 1. 新开一个 Claude Code 会话，让它加载新装的 skill。
 2. 用自然语言提问，如「帮我审计这个仓库会不会烧 Agent SDK credit」（中英文都行——你用哪种语言问，它就用哪种语言答）。agent 会运行审计并归纳：月度预测、会烧 credit 的调用点、以及更省的替代方案。
 
+示例——skill 在 Claude Code 对话中运行的效果：
+
+![claude-credit-audit 作为 Claude Code skill 运行](https://raw.githubusercontent.com/frankguodev/claude-credit-audit/main/public/use-skill-zh.png)
+
 ### Codex
 Codex 使用相同的 `SKILL.md` 格式；改为把本目录放进 **Codex 自己的** skills 目录（确切位置见 Codex 官方文档），然后同样用对话方式触发。
 
@@ -176,3 +154,7 @@ CI（GitHub Actions）在 Python 3.10–3.12 上跑 ruff + pytest。
 
 ## 许可证
 [MIT](LICENSE)
+
+
+## Links
+- X: [frankguodev](https://x.com/frankguodev)

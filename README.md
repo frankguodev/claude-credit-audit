@@ -53,48 +53,22 @@ claude-credit-audit . --plan max5x --fail-on-burn --format json --output cost-re
 - By default it uses only **non-interactive** sessions (whose `entrypoint` isn't vscode/desktop), which better represent CI/headless size; if there are fewer than 3 it falls back to all sessions and labels the result "may overestimate".
 
 ## Example reports
+Real audits of public repositories, run with `--plan max5x`.
 
-> Placeholder text reports until terminal screenshots are added.
+### 🔴 [browser-use/browser-use](https://github.com/browser-use/browser-use) — 32 MB, active Python project
+A `claude-code-action` step in `.github/workflows/claude.yml` is flagged with its trigger, detected model, monthly cost, and cheaper alternatives.
 
-### ✅ Clean — nothing burns credit
-Even a repo with no credit-burning calls is checked for indirect signals, listed separately so you can verify them:
+![Audit of browser-use/browser-use](https://raw.githubusercontent.com/frankguodev/claude-credit-audit/main/public/browser-use-en.png)
 
-```
-📊 Monthly credit forecast: $0 expected (range $0–$0) / $100 limit (max5x)
-   🟢 No credit-burning calls found
+### 🔴 [Shubhamsaboo/awesome-llm-apps](https://github.com/Shubhamsaboo/awesome-llm-apps) — 204 MB
+A large repository: the keyword pre-filter keeps the scan fast, and its `claude-code-action` workflow is detected and priced.
 
-⚠️ May burn credit (indirect/install signals, NOT counted above, verify manually):
-  scripts/install.sh:3  [CI installs Claude Code CLI]
-    npm install -g @anthropic-ai/claude-code@latest
-    reason: CI installs the Claude Code CLI; if run non-interactively (e.g. claude -p) it burns credit — confirm whether it is actually called
-  src/spawn.ts:6  [spawn/exec a claude binary]
-    const proc = spawn(claudePath, args)
-    reason: Code spawns/execs a binary named claude (e.g. claude -p), a programmatic non-interactive call that may burn credit — confirm the actual args
-  .github/workflows/var.yml:5  [variable indirectly set to claude CLI]
-    REVIEW_CLI_BIN: claude
-    reason: A variable points the CLI at claude; at runtime it may run non-interactively and burn credit — indirect call, verify manually
-```
+![Audit of Shubhamsaboo/awesome-llm-apps](https://raw.githubusercontent.com/frankguodev/claude-credit-audit/main/public/awesome-llm-apps-en.png)
 
-### 🔴 Will burn credit
-```
-📊 Monthly credit forecast: $133 expected (range $15–$179) / $100 limit (max5x)
-   🔴 Forecast burns through the limit around day 23
-   ↳ After burnout all automated requests stop (unless overflow billing is enabled)
+### ✅ [JimLiu/baoyu-skills](https://github.com/JimLiu/baoyu-skills) — 35 MB, Claude skills collection
+No credit-burning calls. References to `~/.claude/…` in config files and comments are correctly **not** flagged — no false positives.
 
-🔴 Calls that will burn credit (sorted by expected monthly spend):
-  .github/workflows/matrix.yml:13  [claude -p / headless]
-    model: claude-haiku-4-5  tier: large
-    trigger: push + workflow_dispatch + matrix ×6 → ~204/mo → $61.20/mo (range $5.10–$61.20, 46%)
-    💡 Run interactively instead of headless: saves all $61.20/mo (stays on subscription)
-  .github/workflows/nightly.yml:11  [claude -p / headless]
-    model: claude-opus-4-8  tier: large
-    trigger: cron(0 3 * * *) → ~30/mo → $45.63/mo (range $3.80–$45.63, 34%)
-    💡 Drop to a weekly trigger: $45.63→$6.50/mo, saves $39.14/mo
-    💡 Switch to claude-haiku-4-5: $45.63→$9.13/mo, saves $36.50/mo
-  … and 4 more calls (pr-check.yml, edge.sh, issue-bot.yml, agent.py)
-```
-
-_Abbreviated: each call also prints a `reason:` line and an overflow-billing tip; `--format md` produces a table instead._
+![Audit of JimLiu/baoyu-skills](https://raw.githubusercontent.com/frankguodev/claude-credit-audit/main/public/baoyu-skills-en.png)
 
 ## How it works
 - **Range** — small/large tiers give an optimistic–pessimistic band; the expected value uses each call type's default tier (headless → large, SDK → small, …).
@@ -144,6 +118,10 @@ That puts `SKILL.md`, `src/`, the data files, and the launchers under `~/.claude
 1. Start a new Claude Code session so it picks up the newly added skill.
 2. Ask it in plain language, e.g. *"audit whether this repo will burn Agent SDK credit"* (Chinese works too — the skill replies in the language you ask in). The agent will run the audit and summarize the forecast, the calls that burn credit, and cheaper alternatives.
 
+Example — the skill running inside a Claude Code chat:
+
+![claude-credit-audit running as a Claude Code skill](https://raw.githubusercontent.com/frankguodev/claude-credit-audit/main/public/use-skill-en.png)
+
 ### Codex
 Codex uses the same `SKILL.md` format; place this folder in **Codex's** skills directory instead (see Codex's own docs for its exact location), then trigger it the same conversational way.
 
@@ -176,3 +154,6 @@ CI (GitHub Actions) runs ruff + pytest on Python 3.10–3.12.
 
 ## License
 [MIT](LICENSE)
+
+## Links
+- X: [frankguodev](https://x.com/frankguodev)
