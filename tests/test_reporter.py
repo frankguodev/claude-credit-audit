@@ -45,3 +45,19 @@ def test_text_report_runs(repo, rules, pricing):
     sites = _sites(repo, rules, pricing)
     assert "Monthly credit forecast" in reporter.build_report(sites, "max5x", 100, pricing)
     assert "月度 credit 预测" in reporter.build_report(sites, "max5x", 100, pricing, lang="zh")
+
+
+def test_footer_shows_data_asof(repo, rules, pricing):
+    # 报告应标注定价数据的 as_of 日期（时效提示）。
+    sites = _sites(repo, rules, pricing)
+    as_of = pricing["as_of"]
+    assert as_of in reporter.build_report(sites, "max5x", 100, pricing)
+    assert as_of in reporter.build_markdown(sites, "max5x", 100, pricing)
+
+
+def test_footer_flags_stale_data(repo, rules, pricing):
+    # as_of 远早于今天时，应追加「数据过旧」提醒。
+    sites = _sites(repo, rules, pricing)
+    pricing = {**pricing, "as_of": "2000-01-01"}
+    out = reporter.build_report(sites, "max5x", 100, pricing)
+    assert "days old" in out

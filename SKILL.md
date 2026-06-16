@@ -14,13 +14,16 @@ Default to **English** (`--lang en`). Use **Chinese** (`--lang zh`) when the use
 The user wants the credit cost of a repo's Claude/agent calls after the 6/15 change, or wants to audit `claude -p`, `claude-code-action`, Agent SDK, or Anthropic SDK calls in CI / workflows / scripts.
 
 ## How to run (you execute it — do not make the user type commands)
-This skill bundles a Python CLI. Run the wrapper from **this skill's directory** (it locates the interpreter and `src` itself):
+This skill bundles a Python CLI. **Prerequisite:** Python ≥ 3.10 with PyYAML on PATH; the wrappers check and tell the user to `pip install pyyaml` if it's missing. Run the wrapper from **this skill's directory** (it locates the interpreter and `src` itself):
 
 ```
+# Windows
 cost-audit.cmd <repo-path> --plan <pro|max5x|max20x> --lang <en|zh> --format md --output <tmpdir>/cost-report.md
+# macOS / Linux
+sh cost-audit.sh <repo-path> --plan <pro|max5x|max20x> --lang <en|zh> --format md --output <tmpdir>/cost-report.md
 ```
 
-- Non-Windows or if the wrapper is unavailable, equivalent: `PYTHONPATH=<skill-dir>/src python -m cost_audit.cli <repo> --plan <plan> --lang <lang> ...`
+- If a wrapper is unavailable, equivalent: `PYTHONPATH=<skill-dir>/src python -m cost_audit.cli <repo> --plan <plan> --lang <lang> ...`
 - After it runs, read the generated markdown and present it (below). Do not just paste the raw file.
 - Ask the user for `--plan` (their plan sets the credit limit). If they use Claude Code heavily and want a more accurate token estimate, add `--calibrate` (calibrates tiers from local `~/.claude` history).
 
@@ -30,7 +33,8 @@ cost-audit.cmd <repo-path> --plan <pro|max5x|max20x> --lang <en|zh> --format md 
 - `--pr-per-month N` / `--issues-per-month N` / `--manual-per-month N` — monthly trigger estimates (default 30/10/4).
 - `--tier small|medium|large` — force one token tier (overrides per-rule default).
 - `--calibrate` — calibrate tiers from local real usage.
-- `--format md --output FILE` — write markdown; omit to print to terminal.
+- `--format md|json --output FILE` — write markdown (to present) or JSON (machine-readable); omit to print text to terminal.
+- `--fail-on-burn` — exit non-zero when the expected forecast exceeds the credit limit (for CI gating; not needed for an interactive audit).
 
 ## How to present results
 Summarize into sections — do not dump the raw report:

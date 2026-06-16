@@ -111,6 +111,19 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "## ✅ Still on subscription (no credit)",
         "zh": "## ✅ 仍走订阅池（不烧 credit）",
     },
+    # 页脚：数据时效
+    "footer_asof": {
+        "en": "ℹ️ Pricing & billing rules as of {date}; verify against current Anthropic pricing before relying on these numbers.",
+        "zh": "ℹ️ 定价与计费规则数据截至 {date}；据此决策前请核对 Anthropic 最新定价。",
+    },
+    "footer_stale": {
+        "en": "⚠️ This data is {days} days old — prices/rules have likely changed; update src/cost_audit/data/*.yaml.",
+        "zh": "⚠️ 该数据已过去 {days} 天——价格/规则很可能已变，请更新 src/cost_audit/data/*.yaml。",
+    },
+    "cli_fail_burn": {
+        "en": "❌ --fail-on-burn: expected ${exp:.0f} exceeds the ${credit:.0f} limit ({plan}); exiting non-zero.",
+        "zh": "❌ --fail-on-burn：预期 ${exp:.0f} 超过 ${credit:.0f} 额度（{plan}），以非零退出。",
+    },
     # CLI
     "cli_wrote": {
         "en": "Wrote {path}",

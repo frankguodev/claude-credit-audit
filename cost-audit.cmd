@@ -14,4 +14,9 @@ if not defined PY (
   echo Python 3.10+ not found on PATH. Install it, set COST_AUDIT_PY, or: pip install . ^&^& cost-audit ...
   exit /b 1
 )
+%PY% -c "import yaml" >nul 2>nul
+if errorlevel 1 (
+  echo PyYAML is required but not installed. Run:  %PY% -m pip install pyyaml
+  exit /b 1
+)
 %PY% -m cost_audit.cli %*

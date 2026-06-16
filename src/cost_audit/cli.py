@@ -9,10 +9,10 @@ from pathlib import Path
 
 import yaml
 
-from . import scanner
+from . import __version__, scanner
 from .estimator import estimate
 from .i18n import DEFAULT_LANG, LANGS, t
-from .reporter import build_markdown, build_report
+from .reporter import build_json, build_markdown, build_report, forecast_summary
 
 
 def _load_yaml(name: str) -> dict:
@@ -45,12 +45,23 @@ def _apply_calibration(pricing: dict, claude_home: str | None, lang: str) -> str
     return t(lang, "cli_calib_ok", n=n, label=label, parts=parts)
 
 
+def _safe_print(text: str, file=None) -> None:
+    """打印；若控制台编码无法表示 emoji（如 Windows GBK 且 reconfigure 失败），降级替换。"""
+    stream = file or sys.stdout
+    try:
+        print(text, file=stream)
+    except UnicodeEncodeError:
+        enc = getattr(stream, "encoding", None) or "utf-8"
+        print(text.encode(enc, "replace").decode(enc), file=stream)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         prog="cost-audit",
         description="Forecast which agent calls will burn Agent SDK credit after the "
         "2026-06-15 billing change, with monthly risk and cheaper alternatives.",
     )
+    p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("repo", nargs="?", default=".", help="repo root to scan (default: cwd)")
     p.add_argument(
         "--plan",
@@ -79,12 +90,16 @@ def main(argv: list[str] | None = None) -> int:
         help="report language: en (default) or zh",
     )
     p.add_argument(
-        "--format", choices=["text", "md"], default="text",
-        help="output format: text (terminal, default) or md (markdown report)",
+        "--format", choices=["text", "md", "json"], default="text",
+        help="output format: text (terminal, default), md (markdown), or json (machine-readable)",
     )
     p.add_argument(
         "--output", default=None,
-        help="write to a file instead of stdout (use with --format md)",
+        help="write to a file instead of stdout (use with --format md/json)",
+    )
+    p.add_argument(
+        "--fail-on-burn", action="store_true",
+        help="exit non-zero when the expected forecast exceeds the credit limit (for CI gating)",
     )
     p.add_argument(
         "--calibrate", action="store_true",
@@ -114,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
     rules = scanner.compile_rules(rules_raw)
 
     if args.calibrate:
-        print(_apply_calibration(pricing, args.claude_home, args.lang), file=sys.stderr)
+        _safe_print(_apply_calibration(pricing, args.claude_home, args.lang), file=sys.stderr)
 
     sites = scanner.scan(root, rules)
     estimate(
@@ -128,14 +143,23 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     plan_credit = pricing["plans"][args.plan]["credit_usd"]
-    builder = build_markdown if args.format == "md" else build_report
+    builder = {"md": build_markdown, "json": build_json}.get(args.format, build_report)
     report = builder(sites, args.plan, plan_credit, pricing, args.lang)
 
     if args.output:
         Path(args.output).write_text(report, encoding="utf-8")
-        print(t(args.lang, "cli_wrote", path=args.output))
+        _safe_print(t(args.lang, "cli_wrote", path=args.output))
     else:
-        print(report)
+        _safe_print(report)
+
+    if args.fail_on_burn:
+        summ = forecast_summary(sites, plan_credit, args.lang)
+        if summ["expected"] > plan_credit:
+            _safe_print(
+                t(args.lang, "cli_fail_burn", exp=summ["expected"], credit=plan_credit, plan=args.plan),
+                file=sys.stderr,
+            )
+            return 1
     return 0
 
 

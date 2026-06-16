@@ -4,7 +4,7 @@
 
 > **After 2026-06-15, your `claude -p` and `claude-code-action` runs burn a separate Claude Agent SDK credit pool — and when it runs out, your CI silently stops.** This tool scans your repo *before* that happens and tells you whether you'll run out, when, and how to cut the cost.
 
-A local CLI (and Claude / Codex skill) that **forecasts** which agent calls move from your Claude subscription to burning separate **Agent SDK credit**. Most tools track spend *after the fact* — this one scans your CI and scripts to **predict** it.
+A local CLI — or a [Claude Code skill](#use-as-a-claude-code-skill-or-codex) — that **forecasts** which agent calls move from your Claude subscription to burning separate **Agent SDK credit**. It scans GitHub Actions workflows and scripts for `claude -p`, `claude-code-action`, and Agent SDK calls. Most tools track spend *after the fact* — this one scans your CI and scripts to **predict** it.
 
 ## Quickstart
 Requires Python ≥ 3.10.
@@ -16,11 +16,7 @@ claude-credit-audit /path/to/your-repo --plan max5x
 
 Point it at a **real repo that uses Claude in CI** — not at this repo itself (its test fixtures contain sample `claude -p` calls). `cost-audit` works as a short alias for the command.
 
-```bash
-# run without installing
-pip install pyyaml
-PYTHONPATH=src python -m cost_audit.cli /path/to/your-repo --plan max5x
-```
+To run from a local clone (e.g. for development), see [Development](#development).
 
 ## Background
 From 2026-06-15, **non-interactive** calls — `claude -p` (headless), the Claude Agent SDK, Claude Code GitHub Actions (`claude-code-action`), and third-party apps — no longer draw from your Claude subscription. They consume a separate monthly credit pool (Pro ≈ $20 / Max5x ≈ $100 / Max20x ≈ $200, billed at standard API rates). When the credit runs out, automated requests **stop entirely** (unless you enable overflow billing); credits don't roll over. Interactive `claude` in the terminal is unaffected.
@@ -35,10 +31,21 @@ From 2026-06-15, **non-interactive** calls — `claude -p` (headless), the Claud
 | `--issues-per-month` | monthly runs of issues / issue_comment workflows | 10 |
 | `--manual-per-month` | monthly runs of workflow_dispatch / local scripts | 4 |
 | `--tier` | force one token tier `small\|medium\|large` (overrides per-rule default) | per-rule |
-| `--format` | output format `text\|md` | text |
-| `--output` | write to a file instead of stdout (use with `--format md`) | stdout |
+| `--format` | output format `text\|md\|json` | text |
+| `--output` | write to a file instead of stdout (use with `--format md\|json`) | stdout |
+| `--fail-on-burn` | exit non-zero when the expected forecast exceeds the credit limit (for CI gating) | off |
 | `--calibrate` | calibrate token tiers from local `~/.claude` usage history | off |
 | `--claude-home` | Claude config dir (with `--calibrate`) | `~/.claude` |
+| `--version` | print version and exit | — |
+
+### Use in CI
+Gate a pipeline on the forecast and emit a machine-readable artifact:
+
+```bash
+claude-credit-audit . --plan max5x --fail-on-burn --format json --output cost-report.json
+```
+
+`--fail-on-burn` exits non-zero when the **expected** forecast exceeds your credit limit (the report is still printed/written first), so a workflow step fails before you hit a silent CI stall. `--format json` is stable for scripting (`forecast.expected`, `forecast.level`, `forecast.burnout_day`, per-call `cost_expected`, plus `data_as_of`/`data_stale`).
 
 ### Calibration
 `--calibrate` parses real per-session token usage from `~/.claude/projects/**/*.jsonl` (`message.usage`) and recomputes the small/medium/large tiers from the p25/p50/p90 of your actual history — turning a tier *guess* into a calibration. Notes:
@@ -112,8 +119,33 @@ No — interactive Claude Code / terminal use stays on your subscription.
 **How is this different from usage trackers (e.g. ccusage)?**
 Those report what you already spent. This scans your CI/scripts to **predict** what you'll spend before you run it.
 
-## Use as a Claude / Codex skill
-This repo is also a skill: [SKILL.md](SKILL.md) is the entry point. Install it by placing the folder under your skills directory (e.g. `~/.claude/skills/claude-credit-audit/`), then trigger it conversationally ("audit whether this repo will burn credit") or explicitly. The skill defaults to English and switches to Chinese when your request is Chinese.
+## Use as a Claude Code skill (or Codex)
+This repo doubles as a **Claude Code skill** (the same `SKILL.md` format Codex uses) — [SKILL.md](SKILL.md) is the entry point. As a skill you don't run any commands yourself; the agent runs the bundled CLI for you when your request matches (e.g. *"audit whether this repo will burn credit"*).
+
+> **No `pip install` needed for skill use.** The skill is self-contained: it bundles the CLI under `src/` and a launcher (`cost-audit.cmd` on Windows, `cost-audit.sh` on macOS/Linux) that locates Python and `src/` itself.
+
+**Prerequisite:** Python ≥ 3.10 with PyYAML on PATH. The launcher checks for PyYAML and tells you to `pip install pyyaml` if it's missing.
+
+### Install (Claude Code)
+The whole folder *is* the skill, so the simplest install is to clone it straight into your skills directory:
+
+```bash
+# macOS / Linux
+git clone https://github.com/frankguodev/claude-credit-audit ~/.claude/skills/claude-credit-audit
+```
+```powershell
+# Windows (PowerShell)
+git clone https://github.com/frankguodev/claude-credit-audit "$env:USERPROFILE\.claude\skills\claude-credit-audit"
+```
+
+That puts `SKILL.md`, `src/`, the data files, and the launchers under `~/.claude/skills/claude-credit-audit/` (Windows: `%USERPROFILE%\.claude\skills\claude-credit-audit\`). The extra files (`tests/`, `README.md`, …) are harmless.
+
+### Use it
+1. Start a new Claude Code session so it picks up the newly added skill.
+2. Ask it in plain language, e.g. *"audit whether this repo will burn Agent SDK credit"* (Chinese works too — the skill replies in the language you ask in). The agent will run the audit and summarize the forecast, the calls that burn credit, and cheaper alternatives.
+
+### Codex
+Codex uses the same `SKILL.md` format; place this folder in **Codex's** skills directory instead (see Codex's own docs for its exact location), then trigger it the same conversational way.
 
 ## Project layout
 | Path | Purpose |
@@ -131,13 +163,16 @@ This repo is also a skill: [SKILL.md](SKILL.md) is the entry point. Install it b
 ## Development
 ```bash
 pip install -e ".[dev]"
+ruff check src tests
 pytest -q
 ```
+CI (GitHub Actions) runs ruff + pytest on Python 3.10–3.12.
 
 ## Limitations
 - No real billing API; tiers are estimates — calibrate with `--calibrate` (local history) or `--tier`.
 - Trigger frequencies come from flags, not auto-inferred.
-- Rules and prices live in `src/cost_audit/data/*.yaml`; update them when Anthropic changes pricing.
+- Model and matrix size are attributed per workflow **job** (the job containing the call); a model set only at the workflow's top-level `env:` falls back to the default model.
+- Rules and prices live in `src/cost_audit/data/*.yaml`; the report footer stamps their `as_of` date and flags data older than 90 days — update them when Anthropic changes pricing.
 
 ## License
 [MIT](LICENSE)

@@ -67,9 +67,80 @@ def test_workflow_dispatch_only_uses_manual(repo, tmp_path):
     assert runs == 4
 
 
-def test_matrix_multiplier():
-    wf = {"jobs": {"b": {"strategy": {"matrix": {"os": ["a", "b", "c"], "node": [1, 2]}}}}}
-    assert E._matrix_multiplier(wf) == 6
+def test_pull_request_target_labeled_precisely(repo, tmp_path):
+    # pull_request_target 应按 PR 频率估，且标签精确回显（不混成 pull_request）。
+    wf = tmp_path / ".github" / "workflows" / "prt.yml"
+    wf.parent.mkdir(parents=True)
+    wf.write_text("on:\n  pull_request_target:\n    types: [opened]\njobs: {}\n", encoding="utf-8")
+    label, runs = E.file_trigger(tmp_path, ".github/workflows/prt.yml", 30, 4, 10)
+    assert runs == 30
+    assert "pull_request_target" in label
+
+
+def test_pr_review_only_counted_as_interaction(tmp_path):
+    # 仅 pull_request_review* 触发的 workflow 不应落到 workflow(other)/manual，应按 issues 频率估。
+    wf = tmp_path / ".github" / "workflows" / "rev.yml"
+    wf.parent.mkdir(parents=True)
+    wf.write_text(
+        "on:\n  pull_request_review:\n    types: [submitted]\n"
+        "  pull_request_review_comment:\n    types: [created]\njobs: {}\n",
+        encoding="utf-8",
+    )
+    label, runs = E.file_trigger(tmp_path, ".github/workflows/rev.yml", 30, manual_per_month=4, issues_per_month=10)
+    assert runs == 10
+    assert "workflow(other)" not in label
+
+
+def test_matrix_scoped_to_its_job(tmp_path, rules, pricing):
+    # matrix 在 build job、claude 调用在无 matrix 的 review job：
+    # 调用点不应被 build 的 matrix ×4 放大。
+    from cost_audit import scanner
+
+    wf = tmp_path / ".github" / "workflows" / "split.yml"
+    wf.parent.mkdir(parents=True)
+    wf.write_text(
+        "on:\n  workflow_dispatch:\n"
+        "jobs:\n"
+        "  build:\n"
+        "    strategy:\n"
+        "      matrix:\n"
+        "        os: [a, b, c, d]\n"
+        "    steps:\n"
+        "      - run: echo no-claude-here\n"
+        "  review:\n"
+        "    steps:\n"
+        '      - run: claude -p "review"\n',
+        encoding="utf-8",
+    )
+    sites = scanner.scan(tmp_path, rules)
+    E.estimate(sites, tmp_path, pricing, pr_per_month=30, manual_per_month=4, issues_per_month=10)
+    credit = [s for s in sites if s.billing == "credit"]
+    assert len(credit) == 1
+    assert credit[0].monthly_runs == 4  # workflow_dispatch=4，review 无 matrix → 不 ×4
+    assert "matrix" not in credit[0].trigger
+
+
+def test_model_scoped_to_its_job(tmp_path, rules, pricing):
+    # 两个 job 各用不同模型：每个调用点应按各自 job 的模型计价，而非都取文件首个。
+    from cost_audit import scanner
+
+    wf = tmp_path / ".github" / "workflows" / "models.yml"
+    wf.parent.mkdir(parents=True)
+    wf.write_text(
+        "on:\n  workflow_dispatch:\n"
+        "jobs:\n"
+        "  opus_job:\n"
+        "    steps:\n"
+        '      - run: claude -p --model claude-opus-4-8 "a"\n'
+        "  haiku_job:\n"
+        "    steps:\n"
+        '      - run: claude -p --model claude-haiku-4-5 "b"\n',
+        encoding="utf-8",
+    )
+    sites = scanner.scan(tmp_path, rules)
+    E.estimate(sites, tmp_path, pricing, 30, 4, 10)
+    models = {s.model for s in sites if s.billing == "credit"}
+    assert models == {"claude-opus-4-8", "claude-haiku-4-5"}
 
 
 def test_band_ordering(repo, pricing, rules):

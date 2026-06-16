@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import datetime as _dt
+import json
 import sys
 
 from .estimator import WEEKS_PER_MONTH, per_run_cost
 from .i18n import DEFAULT_LANG, loc, t
 
 DAYS_PER_MONTH = 30.42
+STALE_AFTER_DAYS = 90
 
 _USE_COLOR = sys.stdout.isatty()
 
@@ -34,6 +37,21 @@ def _bold(x):
 
 _LEVEL_EMOJI = {"red": "🔴", "yellow": "🟡", "green": "🟢"}
 _LEVEL_COLOR = {"red": _red, "yellow": _yellow, "green": _green}
+
+
+def _footer_lines(pricing: dict, lang: str) -> list[str]:
+    """数据时效页脚：始终标注 as_of 日期；过旧时追加提醒。"""
+    as_of = pricing.get("as_of")
+    if not as_of:
+        return []
+    lines = [t(lang, "footer_asof", date=as_of)]
+    try:
+        age = (_dt.date.today() - _dt.date.fromisoformat(str(as_of))).days
+    except ValueError:
+        age = 0
+    if age > STALE_AFTER_DAYS:
+        lines.append(t(lang, "footer_stale", days=age))
+    return lines
 
 
 def _haiku_key(pricing: dict) -> str | None:
@@ -153,6 +171,11 @@ def build_report(sites, plan: str, plan_credit: float, pricing: dict, lang: str 
     if not costed and not flagged and not sub_sites:
         lines.append(t(lang, "none_found"))
 
+    footer = _footer_lines(pricing, lang)
+    if footer:
+        lines.append("")
+        lines.extend(footer)
+
     return "\n".join(lines)
 
 
@@ -209,4 +232,81 @@ def build_markdown(sites, plan: str, plan_credit: float, pricing: dict, lang: st
     if not costed and not flagged and not sub_sites:
         out.append(t(lang, "none_found"))
 
+    footer = _footer_lines(pricing, lang)
+    if footer:
+        out.append("---")
+        out.append("")
+        out.extend(footer)
+
     return "\n".join(out)
+
+
+def forecast_summary(sites, plan_credit: float, lang: str = DEFAULT_LANG) -> dict:
+    """预测汇总：仅含已计入成本（high/medium）的 credit 调用。供 JSON 与退出码判定共用。"""
+    costed, _ = _split_credit(sites)
+    low, exp, high = _totals(costed)
+    level, _ = _risk_status(exp, high, plan_credit, lang)
+    burnout_day = credit_burnout_day(exp, plan_credit)
+    return {"expected": exp, "low": low, "high": high, "level": level, "burnout_day": burnout_day}
+
+
+def credit_burnout_day(expected: float, plan_credit: float) -> float | None:
+    """预期消耗超额时，返回约第几天烧爆；否则 None。"""
+    if expected > plan_credit and expected > 0:
+        return plan_credit / expected * DAYS_PER_MONTH
+    return None
+
+
+def build_json(sites, plan: str, plan_credit: float, pricing: dict, lang: str = DEFAULT_LANG) -> str:
+    """机器可读的 JSON 报告，便于 CI / dashboard 消费。"""
+    costed_all, flagged = _split_credit(sites)
+    costed = sorted(costed_all, key=lambda x: x.cost_expected, reverse=True)
+    sub_sites = [s for s in sites if s.billing == "subscription"]
+    summ = forecast_summary(sites, plan_credit, lang)
+
+    def site_obj(s, with_cost: bool):
+        o = {
+            "file": s.file,
+            "line": s.line,
+            "signal": loc(s.signal, lang),
+            "reason": loc(s.reason, lang),
+            "billing": s.billing,
+            "confidence": s.confidence,
+            "model": s.model,
+            "tier": s.tier,
+            "trigger": s.trigger,
+            "monthly_runs": round(s.monthly_runs, 2),
+        }
+        if with_cost:
+            o["cost_expected"] = round(s.cost_expected, 2)
+            o["cost_low"] = round(s.cost_low, 2)
+            o["cost_high"] = round(s.cost_high, 2)
+        return o
+
+    as_of = pricing.get("as_of")
+    stale = False
+    if as_of:
+        try:
+            stale = (_dt.date.today() - _dt.date.fromisoformat(str(as_of))).days > STALE_AFTER_DAYS
+        except ValueError:
+            stale = False
+
+    data = {
+        "plan": plan,
+        "credit_limit_usd": plan_credit,
+        "data_as_of": as_of,
+        "data_stale": stale,
+        "forecast": {
+            "expected": round(summ["expected"], 2),
+            "low": round(summ["low"], 2),
+            "high": round(summ["high"], 2),
+            "level": summ["level"],
+            "burnout_day": (round(summ["burnout_day"], 1) if summ["burnout_day"] else None),
+        },
+        "calls": {
+            "credit": [site_obj(s, True) for s in costed],
+            "flagged": [site_obj(s, False) for s in flagged],
+            "subscription": [site_obj(s, False) for s in sub_sites],
+        },
+    }
+    return json.dumps(data, ensure_ascii=False, indent=2)

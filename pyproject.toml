@@ -7,8 +7,10 @@ requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "frankguo" }]
 keywords = [
-  "claude", "claude-code", "anthropic", "agent-sdk", "credit", "cost",
-  "billing", "finops", "github-actions", "ci", "audit", "claude-skill",
+  "claude", "claude-code", "claude-code-action", "claude-code-skill",
+  "anthropic", "agent-sdk", "agent-sdk-credit", "credit", "cost",
+  "claude-code-cost", "billing", "finops", "github-actions", "ci",
+  "audit", "claude-skill", "headless",
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -29,7 +31,7 @@ Homepage = "https://github.com/frankguodev/claude-credit-audit"
 Issues = "https://github.com/frankguodev/claude-credit-audit/issues"
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "ruff>=0.6"]
 
 [project.scripts]
 claude-credit-audit = "cost_audit.cli:main"
@@ -43,4 +45,11 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-cost_audit = ["data/*.yaml"]
+cost_audit = ["data/*.yaml", "py.typed"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]  # 翻译表/长模板字符串行不强制换行，保持现有风格
