@@ -40,11 +40,14 @@ _LEVEL_COLOR = {"red": _red, "yellow": _yellow, "green": _green}
 
 
 def _footer_lines(pricing: dict, lang: str) -> list[str]:
-    """数据时效页脚：始终标注 as_of 日期；过旧时追加提醒。"""
+    """页脚：计费变更被暂停时先提示；始终标注数据 as_of 日期；过旧时追加提醒。"""
+    lines: list[str] = []
+    if pricing.get("change_status") == "paused":
+        lines.append(t(lang, "footer_paused"))
     as_of = pricing.get("as_of")
     if not as_of:
-        return []
-    lines = [t(lang, "footer_asof", date=as_of)]
+        return lines
+    lines.append(t(lang, "footer_asof", date=as_of))
     try:
         age = (_dt.date.today() - _dt.date.fromisoformat(str(as_of))).days
     except ValueError:
@@ -294,6 +297,7 @@ def build_json(sites, plan: str, plan_credit: float, pricing: dict, lang: str = 
     data = {
         "plan": plan,
         "credit_limit_usd": plan_credit,
+        "billing_change_status": pricing.get("change_status"),
         "data_as_of": as_of,
         "data_stale": stale,
         "forecast": {

@@ -111,7 +111,11 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "## ✅ Still on subscription (no credit)",
         "zh": "## ✅ 仍走订阅池（不烧 credit）",
     },
-    # 页脚：数据时效
+    # 页脚：计费变更状态 + 数据时效
+    "footer_paused": {
+        "en": "⏸️ This 2026-06-15 billing change is currently PAUSED by Anthropic — `claude -p` / `claude-code-action` still use your subscription. This is a forecast of what happens if/when it resumes.",
+        "zh": "⏸️ 该 2026-06-15 计费变更目前被 Anthropic 暂停——`claude -p` / `claude-code-action` 仍走订阅。本报告是其一旦恢复的预测。",
+    },
     "footer_asof": {
         "en": "ℹ️ Pricing & billing rules as of {date}; verify against current Anthropic pricing before relying on these numbers.",
         "zh": "ℹ️ 定价与计费规则数据截至 {date}；据此决策前请核对 Anthropic 最新定价。",

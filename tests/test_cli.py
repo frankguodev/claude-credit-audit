@@ -37,6 +37,7 @@ def test_json_format_parses(repo, capsys):
     assert rc == 0
     data = json.loads(capsys.readouterr().out)
     assert data["plan"] == "max5x"
+    assert data["billing_change_status"] == "paused"
     assert data["data_as_of"]
     assert data["forecast"]["level"] == "red"
     assert len(data["calls"]["credit"]) >= 1

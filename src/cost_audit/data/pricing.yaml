@@ -1,8 +1,12 @@
 # 数据核实日期（ISO）。价格/规则会随 Anthropic 调整而过时——报告页脚据此提示时效，
 # 更新本文件价格时务必同步更新此字段。
-as_of: "2026-06-15"
+as_of: "2026-06-16"
 
-# 计划月度 credit 额度（USD，按 API 标准价计费）。来源：Anthropic 2026-06-15 计费变更。
+# 6/15 Agent SDK 计费变更状态：announced 已宣布 | paused 已暂停 | active 已生效。
+# 截至 2026-06-16 官方已暂停（support.claude.com，"目前一切照旧"）；报告据此提示。恢复后改为 active。
+change_status: paused
+
+# 计划月度 credit 额度（USD，按 API 标准价计费）。来源：Anthropic 2026-06-15 计费变更公告。
 plans:
   pro:    {credit_usd: 20}
   max5x:  {credit_usd: 100}

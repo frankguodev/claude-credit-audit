@@ -2,9 +2,9 @@
 
 **English** | [中文](README_zh_CN.md)
 
-> **After 2026-06-15, your `claude -p` and `claude-code-action` runs burn a separate Claude Agent SDK credit pool — and when it runs out, your CI silently stops.** This tool scans your repo *before* that happens and tells you whether you'll run out, when, and how to cut the cost.
+> **Anthropic announced a billing change (effective 2026-06-15) that moves `claude -p` and `claude-code-action` to a separate Agent SDK credit pool — then [*paused* it on 2026-06-15](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan), so for now nothing has changed.** This tool forecasts what it *would* cost you if/when the change takes effect — so you're ready, not surprised.
 
-A local CLI — or a [Claude Code skill](#use-as-a-claude-code-skill-or-codex) — that **forecasts** which agent calls move from your Claude subscription to burning separate **Agent SDK credit**. It scans GitHub Actions workflows and scripts for `claude -p`, `claude-code-action`, and Agent SDK calls. Most tools track spend *after the fact* — this one scans your CI and scripts to **predict** it.
+A local CLI — or a [Claude Code skill](#use-as-a-claude-code-skill-or-codex) — that **forecasts** which agent calls *would* move from your Claude subscription to burning separate **Agent SDK credit**. It scans GitHub Actions workflows and scripts for `claude -p`, `claude-code-action`, and Agent SDK calls. Most tools track spend *after the fact* — this one scans your CI and scripts to **predict** it.
 
 ## Quickstart
 Requires Python ≥ 3.10.
@@ -19,7 +19,9 @@ Point it at a **real repo that uses Claude in CI** — not at this repo itself (
 To run from a local clone (e.g. for development), see [Development](#development).
 
 ## Background
-From 2026-06-15, **non-interactive** calls — `claude -p` (headless), the Claude Agent SDK, Claude Code GitHub Actions (`claude-code-action`), and third-party apps — no longer draw from your Claude subscription. They consume a separate monthly credit pool (Pro ≈ $20 / Max5x ≈ $100 / Max20x ≈ $200, billed at standard API rates). When the credit runs out, automated requests **stop entirely** (unless you enable overflow billing); credits don't roll over. Interactive `claude` in the terminal is unaffected.
+Anthropic announced that, from 2026-06-15, **non-interactive** calls — `claude -p` (headless), the Claude Agent SDK, the Claude Code GitHub Actions integration (`claude-code-action`), and third-party apps — would no longer draw from your Claude subscription, consuming a separate monthly credit pool instead (Pro $20 / Max5x $100 / Max20x $200, billed at standard API rates; when it runs out, automated requests **stop** unless you enable usage credits, and unused credit doesn't roll over). Interactive `claude` in the terminal/IDE is unaffected.
+
+> **Status (2026-06-16): the change is [paused](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan).** Anthropic's note reads *"for now, nothing has changed"* — `claude -p` and `claude-code-action` still use your subscription today. This tool forecasts the impact *if/when* the change resumes, so you can plan ahead.
 
 ## Usage
 
@@ -78,14 +80,17 @@ No credit-burning calls. References to `~/.claude/…` in config files and comme
 
 ## FAQ
 
-**Does my GitHub Action (`claude-code-action`) burn Agent SDK credit?**
-Yes — from 2026-06-15 it runs non-interactively and draws from the credit pool, not your subscription. This tool flags every `claude-code-action` step.
+**Is this billing change in effect right now?**
+No. Anthropic [paused it on 2026-06-15](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan) — *"for now, nothing has changed."* `claude -p` and `claude-code-action` still use your subscription today. The answers below describe what happens **if/when the change resumes**, which is what this tool forecasts.
 
-**Does `claude -p` still count toward my Claude subscription?**
-No. Headless `claude -p` (and the Claude Agent SDK) moved to the separate Agent SDK credit pool.
+**Would my GitHub Action (`claude-code-action`) burn Agent SDK credit?**
+Yes, once the change takes effect — it runs non-interactively and would draw from the credit pool, not your subscription. This tool flags every `claude-code-action` step.
+
+**Would `claude -p` still count toward my Claude subscription?**
+No. Once in effect, headless `claude -p` (and the Claude Agent SDK) move to the separate Agent SDK credit pool.
 
 **What happens when the Claude Agent SDK credit runs out?**
-Automated requests stop entirely unless you've enabled overflow billing; unused credit doesn't roll over. That's why a forecast matters.
+Automated requests stop entirely unless you've enabled usage credits (overflow billing); unused credit doesn't roll over. That's why a forecast matters.
 
 **Is interactive `claude` in the terminal affected?**
 No — interactive Claude Code / terminal use stays on your subscription.

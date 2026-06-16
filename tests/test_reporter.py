@@ -55,6 +55,13 @@ def test_footer_shows_data_asof(repo, rules, pricing):
     assert as_of in reporter.build_markdown(sites, "max5x", 100, pricing)
 
 
+def test_footer_shows_paused_status(repo, rules, pricing):
+    # change_status: paused 时报告应提示变更已暂停；非 paused 时不提示。
+    sites = _sites(repo, rules, pricing)
+    assert "PAUSED" in reporter.build_report(sites, "max5x", 100, {**pricing, "change_status": "paused"})
+    assert "PAUSED" not in reporter.build_report(sites, "max5x", 100, {**pricing, "change_status": "active"})
+
+
 def test_footer_flags_stale_data(repo, rules, pricing):
     # as_of 远早于今天时，应追加「数据过旧」提醒。
     sites = _sites(repo, rules, pricing)

@@ -2,9 +2,9 @@
 
 [English](README.md) | **中文**
 
-> **2026-06-15 起，你的 `claude -p` 和 `claude-code-action` 会烧一个独立的 Claude Agent SDK credit 池——用完后，你的 CI 会静默停掉。** 本工具在这发生之前扫描你的仓库，告诉你会不会烧爆、第几天、以及怎么省。
+> **Anthropic 宣布了一项计费变更（原定 2026-06-15 生效）：把 `claude -p` 和 `claude-code-action` 改走独立的 Agent SDK credit 池——但又在 [2026-06-15 暂停了它](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)，目前一切照旧。** 本工具预测该变更*一旦生效*会让你花多少，让你提前有数、不被打个措手不及。
 
-一个本地 CLI——也可作为 [Claude Code skill](#作为-claude-code-skill-使用)（与 Codex 同款 `SKILL.md` 格式）——**事前预测**哪些 agent 调用会从订阅池转为消耗独立的 **Agent SDK credit**。它扫描 GitHub Actions workflow 与脚本里的 `claude -p`、`claude-code-action`、Agent SDK 调用。多数工具是事后统计，本工具扫 CI/脚本做**事前预测**。
+一个本地 CLI——也可作为 [Claude Code skill](#作为-claude-code-skill-使用)（与 Codex 同款 `SKILL.md` 格式）——**事前预测**哪些 agent 调用*一旦变更生效*会从订阅池转为消耗独立的 **Agent SDK credit**。它扫描 GitHub Actions workflow 与脚本里的 `claude -p`、`claude-code-action`、Agent SDK 调用。多数工具是事后统计，本工具扫 CI/脚本做**事前预测**。
 
 ## 快速开始
 需要 Python ≥ 3.10。
@@ -19,7 +19,9 @@ claude-credit-audit /path/to/your-repo --plan max5x
 需要从本地克隆运行（如开发用途），见 [开发](#开发)。
 
 ## 背景
-6/15 起，`claude -p`（headless）、Claude Agent SDK、Claude Code 的 GitHub Actions（`claude-code-action`）、第三方 app 等**非交互式**调用不再算进 Claude 订阅，改走单独月度 credit（Pro ≈ $20 / Max5x ≈ $100 / Max20x ≈ $200，按 API 标准价计费）。credit 用完后自动请求**直接停止**（除非手动开 overflow），不滚存。交互式 `claude` 终端使用不受影响。
+Anthropic 宣布：原定 2026-06-15 起，`claude -p`（headless）、Claude Agent SDK、Claude Code 的 GitHub Actions 集成（`claude-code-action`）、第三方 app 等**非交互式**调用将不再算进 Claude 订阅，改走单独月度 credit（Pro $20 / Max5x $100 / Max20x $200，按 API 标准价计费；用完后自动请求**直接停止**，除非开启 usage credits（overflow）续用，且未用完不滚存）。交互式 `claude`（终端/IDE）不受影响。
+
+> **状态（2026-06-16）：该变更已[暂停](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)。** 官方原话是「目前一切照旧」——`claude -p` 和 `claude-code-action` 今天仍走订阅。本工具预测其*一旦恢复*的影响，便于你提前规划。
 
 ## 用法
 
@@ -78,14 +80,17 @@ claude-credit-audit . --plan max5x --fail-on-burn --format json --output cost-re
 
 ## 常见问题（FAQ）
 
+**这个计费变更现在生效了吗？**
+没有。Anthropic 已在 [2026-06-15 暂停](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)——「目前一切照旧」。`claude -p` 和 `claude-code-action` 今天仍走订阅。下面的回答描述的是**变更一旦恢复**的情形，也正是本工具所预测的。
+
 **我的 GitHub Action（`claude-code-action`）会烧 Agent SDK credit 吗？**
-会——6/15 起它属非交互式，走 credit 池而非订阅。本工具会标出每一处 `claude-code-action`。
+变更生效后会——它属非交互式，会走 credit 池而非订阅。本工具会标出每一处 `claude-code-action`。
 
 **`claude -p` 还算我的 Claude 订阅吗？**
-不算。headless `claude -p`（及 Claude Agent SDK）已转入独立的 Agent SDK credit 池。
+变更生效后不算。headless `claude -p`（及 Claude Agent SDK）会转入独立的 Agent SDK credit 池。
 
 **Claude Agent SDK credit 用完会怎样？**
-除非开了 overflow billing，否则自动化请求**直接停止**；未用完的 credit 不滚存。所以「事前预测」才有意义。
+除非开启 usage credits（overflow billing），否则自动化请求**直接停止**；未用完的 credit 不滚存。所以「事前预测」才有意义。
 
 **终端里交互式 `claude` 受影响吗？**
 不受影响——交互式 Claude Code / 终端使用仍走订阅。

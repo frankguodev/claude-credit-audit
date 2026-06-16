@@ -1,4 +1,6 @@
-# 6/15 计费规则（数据驱动，便于后续更新）。
+# Anthropic 宣布的 6/15 Agent SDK 计费规则（数据驱动，便于后续更新）。
+# 注意：该变更截至 2026-06-16 已被官方暂停（见 pricing.yaml 的 change_status）；
+# 以下规则描述的是变更「一旦生效」时的归类，本工具据此做事前预测。
 # billing: credit = 烧 Agent SDK credit；subscription = 仍走订阅池。
 # patterns 为 Python 正则，任一命中即归类。
 # confidence: high | medium | low。tier: small | medium | large。

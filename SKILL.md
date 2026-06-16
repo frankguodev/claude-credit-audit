@@ -1,11 +1,13 @@
 ---
 name: claude-credit-audit
-description: Audit a code repository for Anthropic Claude Agent SDK credit cost after the 2026-06-15 billing change — which agent calls move from the subscription pool to burning Agent SDK credit, the monthly cost risk (with a burn-out-day forecast), and cheaper alternatives. Use when the user asks whether a repo will burn credit, about Agent SDK / Claude Code CI cost, whether `claude -p` or GitHub Actions still count as subscription, or wants to audit Claude calls in CI / scripts / workflows. 中文触发：审计这个仓库会不会烧 credit、Agent SDK 成本、claude -p 和 GitHub Actions 还算订阅吗、Claude Code CI 月度花费、credit 会不会用爆。
+description: Audit a code repository for Anthropic Claude Agent SDK credit cost under Anthropic's announced 2026-06-15 Agent SDK billing change (currently paused) — which agent calls would move from the subscription pool to burning Agent SDK credit, the monthly cost risk (with a burn-out-day forecast), and cheaper alternatives. Use when the user asks whether a repo will burn credit, about Agent SDK / Claude Code CI cost, whether `claude -p` or GitHub Actions still count as subscription, or wants to audit Claude calls in CI / scripts / workflows. 中文触发：审计这个仓库会不会烧 credit、Agent SDK 成本、claude -p 和 GitHub Actions 还算订阅吗、Claude Code CI 月度花费、credit 会不会用爆。
 ---
 
 # Claude Credit Audit
 
-Reads a repo's CI config, scripts, and the user's subscription plan to **forecast, ahead of time**, which agent calls will burn Agent SDK credit after the 2026-06-15 billing change, whether the monthly credit limit will run out (and when), and how to cut cost. Unlike after-the-fact usage trackers, it scans workflows/scripts to predict.
+Reads a repo's CI config, scripts, and the user's subscription plan to **forecast, ahead of time**, which agent calls would burn Agent SDK credit *if/when* Anthropic's announced 2026-06-15 billing change takes effect, whether the monthly credit limit would run out (and when), and how to cut cost. Unlike after-the-fact usage trackers, it scans workflows/scripts to predict.
+
+> **Status (2026-06-16): the billing change is paused** ([Anthropic note](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan) — "for now, nothing has changed"). When presenting results, make clear this is a forecast of what would happen if/when the change resumes, not current billing.
 
 ## Locale
 Default to **English** (`--lang en`). Use **Chinese** (`--lang zh`) when the user's request is primarily Chinese, the target audience is Chinese, or the user asks for a Chinese report. Present your spoken summary in the same language you pass to `--lang`.
