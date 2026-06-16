@@ -2,14 +2,8 @@ name: Publish
 
 on:
   release:
-    types: [published]          # 正式发布：GitHub Release 触发 → 上 PyPI
-  workflow_dispatch:            # 手动触发：用于 TestPyPI 演练
-    inputs:
-      target:
-        description: Where to publish
-        type: choice
-        options: [testpypi, pypi]
-        default: testpypi
+    types: [published]   # Publishing a GitHub Release -> publish to PyPI
+  workflow_dispatch:      # Manual re-run if a release publish needs retrying
 
 jobs:
   build:
@@ -26,29 +20,12 @@ jobs:
           name: dist
           path: dist/
 
-  publish-testpypi:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
-    environment: testpypi
-    permissions:
-      id-token: write          # OIDC：Trusted Publishing 必需，不用 token
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-      - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-
   publish-pypi:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
     environment: pypi
     permissions:
-      id-token: write
+      id-token: write          # OIDC Trusted Publishing (no API token needed)
     steps:
       - uses: actions/download-artifact@v4
         with:
